@@ -257,7 +257,7 @@ cat_json <- function(x) {
 
 capabilities <- function() {
   list(
-    protocolVersion = "2024-11-05",
+    protocolVersion = "2025-06-18",
     capabilities = list(
       # logging = named_list(),
       prompts = named_list(

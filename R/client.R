@@ -405,7 +405,7 @@ mcp_request_initialize <- function() {
     id = 1,
     method = "initialize",
     params = list(
-      protocolVersion = "2024-11-05",
+      protocolVersion = "2025-06-18",
       capabilities = list(
         tools = list(
           listChanged = FALSE
