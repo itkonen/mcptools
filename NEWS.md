@@ -1,5 +1,7 @@
 # mcptools (development version)
 
+* JSON-RPC responses now retain an explicit `id = NULL` value, ensuring parse-error replies conform to the MCP specification.
+
 * `mcp_server()` now formats tool results in the same way as ellmer (#78 by @gadenbuie).
 
 * `mcp_tools()` now sends and receives a `"notifications/initialized"` (#77 by @galachad).
