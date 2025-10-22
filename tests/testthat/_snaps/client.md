@@ -29,3 +29,12 @@
       ! Configuration processing failed.
       i `config` must have a top-level mcpServers entry.
 
+# mcp_tools() errors informatively when process exits
+
+    Code
+      mcp_tools(tmpfile)
+    Condition
+      Error in `mcp_tools()`:
+      ! The command `Rscript` failed with the following error:
+      x Error: intentional error. Execution halted
+

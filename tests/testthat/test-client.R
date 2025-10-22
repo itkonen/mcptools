@@ -86,3 +86,21 @@ test_that("mcp_tools() returns mcpServers when valid", {
   result <- read_mcp_config(tmp_file)
   expect_equal(result, config$mcpServers)
 })
+
+test_that("mcp_tools() errors informatively when process exits", {
+  skip_on_cran()
+
+  config <- list(
+    mcpServers = list(
+      "test" = list(
+        command = "Rscript",
+        args = c("-e", "stop('intentional error')")
+      )
+    )
+  )
+
+  tmpfile <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(config, tmpfile, auto_unbox = TRUE)
+
+  expect_snapshot(error = TRUE, mcp_tools(tmpfile))
+})

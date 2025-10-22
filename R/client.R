@@ -128,7 +128,7 @@ mcp_tools <- function(config = NULL) {
   servers_as_ellmer_tools()
 }
 
-add_mcp_server_stdio <- function(config, name) {
+add_mcp_server_stdio <- function(config, name, call = caller_env()) {
   config_env <- if ("env" %in% names(config)) {
     unlist(config$env)
   } else {
@@ -137,7 +137,7 @@ add_mcp_server_stdio <- function(config, name) {
 
   process <- processx::process$new(
     command = Sys.which(config$command),
-    args = config$args,
+    args = config$args %||% character(),
     env = config_env,
     stdin = "|",
     stdout = "|",
@@ -147,18 +147,40 @@ add_mcp_server_stdio <- function(config, name) {
   the$server_processes <- c(
     the$server_processes,
     list2(
-      !!paste0(c(config$command, config$args), collapse = " ") := process
+      !!paste0(
+        c(config$command, config$args %||% ""),
+        collapse = " "
+      ) := process
     )
   )
 
-  response_initialize <- send_and_receive_stdio(
-    process,
-    mcp_request_initialize()
-  )
-  send_and_receive_stdio(process, mcp_request_initialized())
-  response_tools_list <- send_and_receive_stdio(
-    process,
-    mcp_request_tools_list()
+  # Fail gracefully if the process failed on startup (#82)
+  tryCatch(
+    {
+      response_initialize <- send_and_receive_stdio(
+        process,
+        mcp_request_initialize()
+      )
+
+      send_and_receive_stdio(process, mcp_request_initialized())
+      response_tools_list <- send_and_receive_stdio(
+        process,
+        mcp_request_tools_list()
+      )
+    },
+    error = function(e) {
+      if (process$get_exit_status() %in% c(1L, 2L)) {
+        cli::cli_abort(
+          c(
+            "The command {.code {config$command}} failed with the following error:",
+            "x" = "{paste0(process$read_all_error_lines(), collapse = '. ')}"
+          ),
+          call = call
+        )
+      }
+
+      cnd_signal(e)
+    }
   )
 
   the$mcp_servers[[name]] <- list(
