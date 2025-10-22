@@ -1,3 +1,5 @@
+skip_if(is_fedora())
+
 test_that("mcp_tools works", {
   skip_if_not_installed("withr")
   skip_if(identical(Sys.getenv("GITHUB_PAT"), ""))

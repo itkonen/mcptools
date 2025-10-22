@@ -34,3 +34,17 @@ mcptools_server_log <- function() {
 mcptools_client_log <- function() {
   Sys.getenv("MCPTOOLS_CLIENT_LOG", tempfile(fileext = ".txt"))
 }
+
+# from rstudio/reticulate
+is_unix <- function() {
+  identical(.Platform$OS.type, "unix")
+}
+
+is_fedora <- function() {
+  if (is_unix() && file.exists("/etc/os-release")) {
+    os_info <- readLines("/etc/os-release")
+    any(grepl("Fedora", os_info))
+  } else {
+    FALSE
+  }
+}

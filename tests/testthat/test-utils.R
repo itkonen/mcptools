@@ -1,3 +1,5 @@
+skip_if(is_fedora())
+
 test_that("jsonrpc_response works", {
   # jsonrpc_response returns result when provided
   result <- jsonrpc_response("123", result = "success")

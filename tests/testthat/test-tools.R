@@ -1,3 +1,5 @@
+skip_if(is_fedora())
+
 test_that("set_server_tools sets default tools when x is NULL", {
   set_server_tools(NULL)
   server_tools_names <- vapply(

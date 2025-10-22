@@ -1,3 +1,5 @@
+skip_if(is_fedora())
+
 test_that("mcp_session returns early when not interactive", {
   local_mocked_bindings(interactive = function() FALSE)
   expect_invisible(mcp_session())

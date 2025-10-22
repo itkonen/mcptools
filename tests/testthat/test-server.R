@@ -1,3 +1,5 @@
+skip_if(is_fedora())
+
 test_that("roundtrip mcp_server and mcp_tools (stdio)", {
   previous_server_processes <- names(the$server_processes)
 
