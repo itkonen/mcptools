@@ -132,30 +132,8 @@ mcp_tools <- function(config = NULL) {
   for (i in seq_along(config)) {
     config_i <- config[[i]]
     name_i <- names(config)[i]
-    config_i_env <- if ("env" %in% names(config_i)) {
-      unlist(config_i$env)
-    } else {
-      NULL
-    }
 
-    process <- processx::process$new(
-      # seems like the R process has a different PATH than process_exec
-      command = Sys.which(config_i$command),
-      args = config_i$args,
-      env = config_i_env,
-      stdin = "|",
-      stdout = "|",
-      stderr = "|"
-    )
-
-    the$server_processes <- c(
-      the$server_processes,
-      list2(
-        !!paste0(c(config_i$command, config_i$args), collapse = " ") := process
-      )
-    )
-
-    add_mcp_server(process = process, name = name_i)
+    add_mcp_server(config = config_i, name = name_i)
   }
 
   servers_as_ellmer_tools()
@@ -213,7 +191,6 @@ read_mcp_config <- function(config, call = caller_env()) {
   config$mcpServers
 }
 
-
 error_no_mcp_config <- function(call) {
   cli::cli_abort(
     c(
@@ -225,13 +202,64 @@ error_no_mcp_config <- function(call) {
   )
 }
 
-add_mcp_server <- function(process, name) {
-  response_initialize <- send_and_receive(process, mcp_request_initialize())
-  send_and_receive(process, mcp_request_initialized())
-  response_tools_list <- send_and_receive(process, mcp_request_tools_list())
+add_mcp_server <- function(config, name, call = caller_env()) {
+  config_env <- if ("env" %in% names(config)) {
+    unlist(config$env)
+  } else {
+    NULL
+  }
+
+  process <- processx::process$new(
+    command = Sys.which(config$command),
+    args = config$args %||% character(),
+    env = config_env,
+    stdin = "|",
+    stdout = "|",
+    stderr = "|"
+  )
+
+  the$server_processes <- c(
+    the$server_processes,
+    list2(
+      !!paste0(
+        c(config$command, config$args %||% ""),
+        collapse = " "
+      ) := process
+    )
+  )
+
+  # Fail gracefully if the process failed on startup (#82)
+  tryCatch(
+    {
+      response_initialize <- send_and_receive(
+        process,
+        mcp_request_initialize()
+      )
+
+      send_and_receive(process, mcp_request_initialized())
+      response_tools_list <- send_and_receive(
+        process,
+        mcp_request_tools_list()
+      )
+    },
+    error = function(e) {
+      if (process$get_exit_status() %in% c(1L, 2L)) {
+        cli::cli_abort(
+          c(
+            "The command {.code {config$command}} failed with the following error:",
+            "x" = "{paste0(process$read_all_error_lines(), collapse = '. ')}"
+          ),
+          call = call
+        )
+      }
+
+      cnd_signal(e)
+    }
+  )
 
   the$mcp_servers[[name]] <- list(
     name = name,
+    type = "stdio",
     process = process,
     tools = response_tools_list$result,
     id = 3
