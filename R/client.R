@@ -66,6 +66,38 @@ the$mcp_servers <- list()
 #' }
 #' ```
 #'
+#' @section Connecting to remote (http) servers:
+#' `mcp_tools()`, which supports using R as an MCP _client_ via ellmer, only
+#' implements the local (stdio) protocol. However, some MCP _servers_ only
+#' implement the http protocol.
+#'
+#' In that case, we recommend using
+#' [mcp-remote](https://www.npmjs.com/package/mcp-remote), a local (stdio)
+#' MCP server that supports connecting to remote (http) servers using the
+#' stdio protocol, with fully-featured authentication. In other words,
+#' `mcp-remote` converts remote MCP servers to mcptools-compatible local ones.
+#'
+#' To connect to remote (http) MCP servers when using ellmer as a client, use
+#' the command `npx` with the args `mcp-remote` and the URL provided by the
+#' remote server. For example, you might write:
+#'
+#' ```
+#' {
+#'   "mcpServers": {
+#'     "remote-example": {
+#'       "command": "npx",
+#'       "args": [
+#'         "mcp-remote",
+#'         "https://remote.mcp.server/sse"
+#'       ]
+#'     }
+#'   }
+#' }
+#' ```
+#'
+#' mcp-remote's [homepage](https://www.npmjs.com/package/mcp-remote) has many
+#' examples for various authentication schemes.
+#'
 #' @returns
 #' * `mcp_tools()` returns a list of ellmer tools that can be passed directly
 #' to the `$set_tools()` method of an [ellmer::Chat] object. If the file at

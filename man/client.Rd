@@ -68,6 +68,39 @@ in that file:
 }\if{html}{\out{</div>}}
 }
 
+\section{Connecting to remote (http) servers}{
+
+\code{mcp_tools()}, which supports using R as an MCP \emph{client} via ellmer, only
+implements the local (stdio) protocol. However, some MCP \emph{servers} only
+implement the http protocol.
+
+In that case, we recommend using
+\href{https://www.npmjs.com/package/mcp-remote}{mcp-remote}, a local (stdio)
+MCP server that supports connecting to remote (http) servers using the
+stdio protocol, with fully-featured authentication. In other words,
+\code{mcp-remote} converts remote MCP servers to mcptools-compatible local ones.
+
+To connect to remote (http) MCP servers when using ellmer as a client, use
+the command \code{npx} with the args \code{mcp-remote} and the URL provided by the
+remote server. For example, you might write:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{\{
+  "mcpServers": \{
+    "remote-example": \{
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://remote.mcp.server/sse"
+      ]
+    \}
+  \}
+\}
+}\if{html}{\out{</div>}}
+
+mcp-remote's \href{https://www.npmjs.com/package/mcp-remote}{homepage} has many
+examples for various authentication schemes.
+}
+
 \examples{
 # setup
 config_file <- tempfile(fileext = "json")
