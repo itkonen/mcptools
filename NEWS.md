@@ -1,10 +1,8 @@
 # mcptools (development version)
 
- * `mcp_tools()` now errors more informatively when an MCP server process exits unexpectedly (#82).
+* `mcp_tools()` now errors more informatively when an MCP server process exits unexpectedly (#82).
 
 * `mcp_server()` now supports HTTP transport in addition to stdio. Use `type = "http"` to start an HTTP server, with optional `host` and `port` arguments. For now, the implementation is authless.
-
-* `mcp_tools()` now supports connecting to HTTP-based MCP servers. Configure servers with a `url` field in the config file instead of `command`/`args`.
 
 * JSON-RPC responses now retain an explicit `id = NULL` value, ensuring parse-error replies conform to the MCP specification.
 
