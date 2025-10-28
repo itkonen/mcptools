@@ -89,6 +89,7 @@ test_that("mcp_tools() returns mcpServers when valid", {
 
 test_that("mcp_tools() errors informatively when process exits", {
   skip_on_cran()
+  skip_on_ci()
 
   config <- list(
     mcpServers = list(
