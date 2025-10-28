@@ -21,7 +21,10 @@ mcp_session()
 \item{tools}{Optional collection of tools to expose. Supply either a list
 of objects created by \code{\link[ellmer:tool]{ellmer::tool()}} or a path to an \code{.R} file that,
 when sourced, yields such a list. Defaults to \code{NULL}, which serves only
-the built-in session tools when \code{session_tools} is \code{TRUE}.}
+the built-in session tools when \code{session_tools} is \code{TRUE}. Note that
+\strong{tools are associated with the \code{mcp_server()}} rather than with
+\code{mcp_session()}s; to determine what tools are available in a session,
+set the \code{tools} argument to \code{mcp_server()}.}
 
 \item{...}{Reserved for future use; currently ignored.}
 
@@ -37,7 +40,8 @@ for stdio transport.}
 
 \item{session_tools}{Logical value whether to include the built-in session
 tools (\code{list_r_sessions}, \code{select_r_session}) that work with
-\code{mcp_session()}. Defaults to \code{TRUE}.}
+\code{mcp_session()}. Defaults to \code{TRUE}. Note that the tools to interface with
+sessions are still first routed through the \code{mcp_server()}.}
 }
 \value{
 \code{mcp_server()} and \code{mcp_session()} are both called primarily for their

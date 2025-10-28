@@ -70,7 +70,10 @@
 #' @param tools Optional collection of tools to expose. Supply either a list
 #'   of objects created by [ellmer::tool()] or a path to an `.R` file that,
 #'   when sourced, yields such a list. Defaults to `NULL`, which serves only
-#'   the built-in session tools when `session_tools` is `TRUE`.
+#'   the built-in session tools when `session_tools` is `TRUE`. Note that
+#'   **tools are associated with the `mcp_server()`** rather than with
+#'   `mcp_session()`s; to determine what tools are available in a session,
+#'   set the `tools` argument to `mcp_server()`.
 #' @param ... Reserved for future use; currently ignored.
 #' @param type Transport type: `"stdio"` for standard input/output (default),
 #'   or `"http"` for HTTP-based transport.
@@ -81,7 +84,8 @@
 #'   for stdio transport.
 #' @param session_tools Logical value whether to include the built-in session
 #'   tools (`list_r_sessions`, `select_r_session`) that work with
-#'   `mcp_session()`. Defaults to `TRUE`.
+#'   `mcp_session()`. Defaults to `TRUE`. Note that the tools to interface with
+#'   sessions are still first routed through the `mcp_server()`.
 #'
 #' @returns
 #' `mcp_server()` and `mcp_session()` are both called primarily for their
