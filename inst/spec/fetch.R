@@ -1,6 +1,6 @@
 # The full plain-text spec is kept in inst/spec for use by coding agents.
 # Update it by calling this function.
-fetch_spec <- function(revision = "2025-06-18") {
+fetch_spec <- function(revision = "2025-11-25") {
   base_url <- sprintf(
     "https://modelcontextprotocol.io/specification/%s",
     revision
