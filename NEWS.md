@@ -1,5 +1,7 @@
 # mcptools (development version)
 
+* The implementation now supports the 2025-11-25 protocol version, updated from 2025-06-18.
+
 # mcptools 0.2.0
 
 ## Server
