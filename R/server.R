@@ -264,6 +264,33 @@ handle_http_post <- function(req) {
     ))
   }
 
+  # Extract and validate MCP-Protocol-Version header for non-initialize requests
+  protocol_version <- req$HTTP_MCP_PROTOCOL_VERSION
+  
+  # For initialize requests, protocol version comes from the request body
+  # For subsequent requests, it should come from the HTTP header
+  if (!identical(data$method, "initialize")) {
+    # Per spec: if no header, assume 2025-03-26 for backwards compatibility
+    if (is.null(protocol_version)) {
+      protocol_version <- "2025-03-26"
+    }
+    
+    # Validate the protocol version
+    if (!is_supported_version(protocol_version)) {
+      return(list(
+        status = 400L,
+        headers = list("Content-Type" = "application/json"),
+        body = to_json(list(
+          error = "Invalid or unsupported MCP-Protocol-Version",
+          data = list(
+            provided = protocol_version,
+            supported = supported_mcp_versions()
+          )
+        ))
+      ))
+    }
+  }
+
   if (is.null(data$id)) {
     result <- handle_http_notification_or_response(data)
     return(list(
@@ -273,7 +300,7 @@ handle_http_post <- function(req) {
     ))
   }
 
-  result <- handle_http_request_message(data)
+  result <- handle_http_request_message(data, protocol_version)
 
   list(
     status = 200L,
@@ -294,9 +321,10 @@ handle_http_notification_or_response <- function(data) {
   NULL
 }
 
-handle_http_request_message <- function(data) {
+handle_http_request_message <- function(data, protocol_version = NULL) {
   if (data$method == "initialize") {
-    return(jsonrpc_response(data$id, capabilities()))
+    client_version <- data$params$protocolVersion
+    return(jsonrpc_response(data$id, capabilities(client_version)))
   } else if (data$method == "tools/list") {
     return(jsonrpc_response(
       data$id,
@@ -365,7 +393,8 @@ handle_message_from_client <- function(line) {
   # If we made it here, it's valid JSON
 
   if (data$method == "initialize") {
-    res <- jsonrpc_response(data$id, capabilities())
+    client_version <- data$params$protocolVersion
+    res <- jsonrpc_response(data$id, capabilities(client_version))
     cat_json(res)
   } else if (data$method == "tools/list") {
     res <- jsonrpc_response(
@@ -438,9 +467,17 @@ cat_json <- function(x) {
   nanonext::write_stdout(to_json(x))
 }
 
-capabilities <- function() {
+capabilities <- function(client_version = NULL) {
+  # Negotiate protocol version with client
+  negotiated_version <- if (!is.null(client_version)) {
+    negotiate_version(client_version)
+  } else {
+    # Default to latest if no client version provided
+    supported_mcp_versions()[1]
+  }
+  
   list(
-    protocolVersion = "2025-06-18",
+    protocolVersion = negotiated_version,
     capabilities = list(
       # logging = named_list(),
       prompts = named_list(
