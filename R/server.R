@@ -87,6 +87,26 @@
 #'   `mcp_session()`. Defaults to `TRUE`. Note that the tools to interface with
 #'   sessions are still first routed through the `mcp_server()`.
 #'
+#' @section Protocol Version Support:
+#'
+#' The server supports multiple versions of the Model Context Protocol and will
+#' negotiate the version with the client during initialization. Currently supported
+#' versions are:
+#'
+#' * `2025-11-25` (latest)
+#' * `2025-06-18`
+#' * `2025-03-26`
+#' * `2024-11-05`
+#'
+#' During the initialization phase, the client sends its preferred protocol version.
+#' If the server supports that version, it will use it. Otherwise, the server
+#' responds with the latest version it supports, and the client can choose to
+#' disconnect if it doesn't support that version.
+#'
+#' For HTTP transport, clients must include the `MCP-Protocol-Version` header on
+#' all requests after initialization. If no header is provided, the server assumes
+#' version `2025-03-26` for backwards compatibility.
+#'
 #' @returns
 #' `mcp_server()` and `mcp_session()` are both called primarily for their
 #'  side-effects.

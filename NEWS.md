@@ -1,5 +1,9 @@
 # mcptools (development version)
 
+## Server
+
+* `mcp_server()` now supports multiple protocol versions and negotiates the version with clients during initialization. Supported versions are: `2025-11-25`, `2025-06-18`, `2025-03-26`, and `2024-11-05`. For HTTP transport, the server validates the `MCP-Protocol-Version` header on requests after initialization.
+
 # mcptools 0.2.0
 
 ## Server
