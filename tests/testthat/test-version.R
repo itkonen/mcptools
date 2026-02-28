@@ -61,3 +61,21 @@ test_that("capabilities returns negotiated version", {
   caps <- capabilities(NULL)
   expect_equal(caps$protocolVersion, supported_mcp_versions()[1])
 })
+
+test_that("capabilities structure is valid", {
+  caps <- capabilities("2025-06-18")
+  
+  # Check required fields exist
+  expect_true("protocolVersion" %in% names(caps))
+  expect_true("capabilities" %in% names(caps))
+  expect_true("serverInfo" %in% names(caps))
+  
+  # Check capabilities structure
+  expect_true("tools" %in% names(caps$capabilities))
+  expect_true("prompts" %in% names(caps$capabilities))
+  expect_true("resources" %in% names(caps$capabilities))
+  
+  # Check serverInfo structure
+  expect_true("name" %in% names(caps$serverInfo))
+  expect_true("version" %in% names(caps$serverInfo))
+})
