@@ -36,7 +36,8 @@ The server has been updated to negotiate versions during initialization:
 
 #### stdio Transport
 
-For stdio transport (the default), version negotiation happens in `handle_message_from_client()`:
+For stdio transport (the default), version negotiation happens ONLY during initialization
+in `handle_message_from_client()`:
 
 ```r
 if (data$method == "initialize") {
@@ -46,7 +47,13 @@ if (data$method == "initialize") {
 }
 ```
 
-The `capabilities()` function now accepts an optional `client_version` parameter and negotiates the appropriate version.
+**Important**: For stdio, the protocol version is ONLY included in the `initialize` request
+and response. All subsequent messages (tools/list, tools/call, etc.) do NOT include version
+information. The negotiated version applies for the entire session. This is per the MCP
+specification which states that protocol version headers are only required for HTTP transport.
+
+The `capabilities()` function accepts an optional `client_version` parameter and negotiates
+the appropriate version.
 
 #### HTTP Transport
 

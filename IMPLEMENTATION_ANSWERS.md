@@ -2,6 +2,24 @@
 
 This document answers the specific questions posed in the problem statement about implementing multi-version protocol support.
 
+## Important Note: stdio vs HTTP Protocol Version Handling
+
+The MCP specification treats protocol versions differently for stdio and HTTP transports:
+
+### stdio Transport
+- Protocol version is **ONLY** exchanged during the `initialize` request and response
+- Subsequent messages (tools/list, tools/call, notifications) do **NOT** include version information
+- The version negotiated during initialization applies for the entire session
+- This is by design - stdio is a single client/server pair with a persistent connection
+
+### HTTP Transport  
+- Protocol version is exchanged during initialization (in request body and response)
+- Clients **MUST** include the `MCP-Protocol-Version` header on **all subsequent requests**
+- This is necessary because HTTP is stateless and can support multiple concurrent clients
+- Each request can be processed according to its version header
+
+The implementation correctly follows this specification. The confusion may arise because HTTP requires version headers on every request, but stdio does not.
+
 ## Question 1: What needs to be changed to implement other versions?
 
 To add support for a new protocol version, you need to:

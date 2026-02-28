@@ -98,14 +98,20 @@
 #' * `2025-03-26`
 #' * `2024-11-05`
 #'
-#' During the initialization phase, the client sends its preferred protocol version.
-#' If the server supports that version, it will use it. Otherwise, the server
-#' responds with the latest version it supports, and the client can choose to
-#' disconnect if it doesn't support that version.
+#' During the initialization phase, the client sends its preferred protocol version
+#' in the `initialize` request. If the server supports that version, it will use it.
+#' Otherwise, the server responds with the latest version it supports, and the client
+#' can choose to disconnect if it doesn't support that version.
 #'
-#' For HTTP transport, clients must include the `MCP-Protocol-Version` header on
-#' all requests after initialization. If no header is provided, the server assumes
-#' version `2025-03-26` for backwards compatibility.
+#' **Version handling differs by transport:**
+#'
+#' * **stdio transport**: Protocol version is ONLY exchanged during the `initialize`
+#'   request and response. Subsequent messages do NOT include version information.
+#'   The version negotiated during initialization applies for the entire session.
+#'
+#' * **HTTP transport**: Clients must include the `MCP-Protocol-Version` header on
+#'   all requests after initialization. If no header is provided, the server assumes
+#'   version `2025-03-26` for backwards compatibility.
 #'
 #' @returns
 #' `mcp_server()` and `mcp_session()` are both called primarily for their
@@ -285,6 +291,10 @@ handle_http_post <- function(req) {
   }
 
   # Extract and validate MCP-Protocol-Version header for non-initialize requests
+  # NOTE: This is HTTP-specific. For stdio transport, protocol version is ONLY
+  # exchanged during the initialize request/response and is NOT included in
+  # subsequent messages. Per MCP spec, only HTTP clients must send the version
+  # header on all requests after initialization.
   protocol_version <- req$HTTP_MCP_PROTOCOL_VERSION
   
   # For initialize requests, protocol version comes from the request body
