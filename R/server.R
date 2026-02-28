@@ -556,6 +556,9 @@ tool_as_json <- function(tool) {
   inputSchema <- compact(as_json(dummy_provider, tool@arguments))
   # This field is present but shouldn't be
   inputSchema$description <- NULL
+  if (is.null(inputSchema$properties)) {
+    inputSchema$properties <- structure(list(), names = character())
+  }
 
   list(
     name = tool@name,

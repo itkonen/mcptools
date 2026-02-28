@@ -15,8 +15,7 @@ jsonrpc_response <- function(id, result = NULL, error = NULL) {
 named_list <- function(...) {
   res <- list(...)
   if (length(res) == 0) {
-    # A way of creating an empty named list
-    res <- list(a = 1)[0]
+    res <- structure(list(), names = character())
   }
   res
 }

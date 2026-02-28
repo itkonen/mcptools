@@ -67,6 +67,9 @@ get_stdio_protocol_version <- function() {
 #' @noRd
 set_http_protocol_version <- function(session_id, version) {
   if (is.null(the$http_protocol_versions)) {
+    ## TODO: This will grow indefinitely as new sessions are initialized. We should
+    ## consider pruning expired sessions after some timeout, but for now this is
+    ## simpler than implementing a more complex structure for tracking session state.
     the$http_protocol_versions <- list()
   }
   the$http_protocol_versions[[session_id]] <- version
