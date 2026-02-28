@@ -265,6 +265,29 @@ handle_http_post <- function(req) {
   }
 
   if (is.null(data$id)) {
+    # Notifications are sent after initialize; validate session headers only
+    # when the negotiated version requires them (>= 2025-06-18). If the
+    # client sends a session ID, always verify it maps to a known session.
+    if (!identical(data$method, "notifications/initialized") ||
+        !is.null(req$HTTP_MCP_SESSION_ID)) {
+      session_id <- req$HTTP_MCP_SESSION_ID
+      negotiated <- if (!is.null(session_id)) {
+        get_http_protocol_version(session_id)
+      }
+      if (!is.null(negotiated) &&
+          protocol_version_gte(negotiated, "2025-06-18")) {
+        session_validation <- validate_session_id_header(req)
+        if (!isTRUE(session_validation)) {
+          return(session_validation)
+        }
+      } else if (!is.null(session_id) && is.null(negotiated)) {
+        # Session ID was sent but not recognised — always reject
+        session_validation <- validate_session_id_header(req)
+        if (!isTRUE(session_validation)) {
+          return(session_validation)
+        }
+      }
+    }
     result <- handle_http_notification_or_response(data)
     return(list(
       status = 202L,
@@ -273,11 +296,54 @@ handle_http_post <- function(req) {
     ))
   }
 
-  result <- handle_http_request_message(data)
+  # Validate Mcp-Session-Id and MCP-Protocol-Version headers on non-initialize
+
+  # requests. Per spec (from 2025-06-18), the client MUST include both on
+  # subsequent HTTP requests. For older protocol versions we are permissive:
+  # if the client sends a session ID we verify it, but we do not require either
+  # header to be present.
+  if (!identical(data$method, "initialize")) {
+    session_id <- req$HTTP_MCP_SESSION_ID
+    negotiated <- if (!is.null(session_id)) {
+      get_http_protocol_version(session_id)
+    }
+
+    if (!is.null(negotiated) &&
+        protocol_version_gte(negotiated, "2025-06-18")) {
+      # Version >= 2025-06-18: enforce both headers
+      session_validation <- validate_session_id_header(req)
+      if (!isTRUE(session_validation)) {
+        return(session_validation)
+      }
+      version_validation <- validate_protocol_version_header(req)
+      if (!isTRUE(version_validation)) {
+        return(version_validation)
+      }
+    } else if (!is.null(session_id) && is.null(negotiated)) {
+      # Session ID was sent but not recognised — always reject
+      session_validation <- validate_session_id_header(req)
+      if (!isTRUE(session_validation)) {
+        return(session_validation)
+      }
+    }
+    # Otherwise (no session ID header, or version < 2025-06-18): let it through
+  }
+
+  result <- handle_http_request_message(data, req)
+
+  headers <- list("Content-Type" = "application/json")
+
+  # Return the Mcp-Session-Id header on initialize responses so the client
+  # can include it on subsequent requests.
+  session_id <- attr(result, "mcp_session_id")
+  if (!is.null(session_id)) {
+    headers[["Mcp-Session-Id"]] <- session_id
+    attr(result, "mcp_session_id") <- NULL
+  }
 
   list(
     status = 200L,
-    headers = list("Content-Type" = "application/json"),
+    headers = headers,
     body = to_json(result)
   )
 }
@@ -294,9 +360,20 @@ handle_http_notification_or_response <- function(data) {
   NULL
 }
 
-handle_http_request_message <- function(data) {
+handle_http_request_message <- function(data, req) {
   if (data$method == "initialize") {
-    return(jsonrpc_response(data$id, capabilities()))
+    client_version <- data$params$protocolVersion %||% latest_protocol_version
+    negotiated <- negotiate_protocol_version(client_version)
+    # The server always generates a session ID for internal tracking.
+    # It is only returned to the client (via response header) when the
+    # negotiated version requires it (>= 2025-06-18).
+    session_id <- nanonext::random(n = 16L)
+    set_http_protocol_version(session_id, negotiated)
+    result <- jsonrpc_response(data$id, capabilities(negotiated))
+    if (protocol_version_gte(negotiated, "2025-06-18")) {
+      attr(result, "mcp_session_id") <- session_id
+    }
+    return(result)
   } else if (data$method == "tools/list") {
     return(jsonrpc_response(
       data$id,
@@ -365,7 +442,10 @@ handle_message_from_client <- function(line) {
   # If we made it here, it's valid JSON
 
   if (data$method == "initialize") {
-    res <- jsonrpc_response(data$id, capabilities())
+    client_version <- data$params$protocolVersion %||% latest_protocol_version
+    negotiated <- negotiate_protocol_version(client_version)
+    set_stdio_protocol_version(negotiated)
+    res <- jsonrpc_response(data$id, capabilities(negotiated))
     cat_json(res)
   } else if (data$method == "tools/list") {
     res <- jsonrpc_response(
@@ -438,9 +518,9 @@ cat_json <- function(x) {
   nanonext::write_stdout(to_json(x))
 }
 
-capabilities <- function() {
-  list(
-    protocolVersion = "2025-06-18",
+capabilities <- function(protocol_version = latest_protocol_version) {
+  res <- list(
+    protocolVersion = protocol_version,
     capabilities = list(
       # logging = named_list(),
       prompts = named_list(
@@ -457,9 +537,15 @@ capabilities <- function() {
     serverInfo = list(
       name = "R mcptools server",
       version = "0.0.1"
-    ),
-    instructions = "This provides information about a running R session."
+    )
   )
+
+  # `instructions` was introduced in protocol version 2025-03-26
+  if (protocol_version_gte(protocol_version, "2025-03-26")) {
+    res$instructions <- "This provides information about a running R session."
+  }
+
+  res
 }
 
 tool_as_json <- function(tool) {
