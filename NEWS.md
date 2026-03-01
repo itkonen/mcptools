@@ -1,5 +1,23 @@
 # mcptools (development version)
 
+# mcptools 0.3.0
+
+## Server
+
+* The server now negotiates a protocol version with clients during initialization per the MCP specification. Supported versions include `2024-11-05`, `2025-03-26`, `2025-06-18`, and `2025-11-25`.
+
+* `mcp_server()` gains a new `instructions` argument, allowing users to provide custom server instructions that are included in the capabilities response sent to clients.
+ 
+* HTTP transport now generates and returns a unique session ID via the `Mcp-Session-Id` response header during initialization.
+
+* The `serverInfo.version` in the capabilities response now reflects the actual installed package version rather than a hardcoded value.
+
+* Tools without arguments now include an explicit empty `properties` object in their JSON schema, preventing missing fields.
+
+* Fixed an issue where the stdio message handler did not return early after sending an error response for invalid requests.
+
+* Fixed HTTP session validation to correctly reject unknown or expired session IDs.
+
 # mcptools 0.2.0
 
 ## Server

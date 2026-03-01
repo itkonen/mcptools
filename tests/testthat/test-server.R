@@ -38,7 +38,7 @@ test_that("roundtrip mcp_server and mcp_tools (http)", {
     command = rscript_binary(),
     args = c(
       "-e",
-      "mcptools::mcp_server(type = 'http', port = 8080)"
+      "mcptools::mcp_server(type = 'http', port = 8087)"
     ),
     stdout = "|",
     stderr = "|"

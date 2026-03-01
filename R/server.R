@@ -86,6 +86,8 @@
 #'   tools (`list_r_sessions`, `select_r_session`) that work with
 #'   `mcp_session()`. Defaults to `TRUE`. Note that the tools to interface with
 #'   sessions are still first routed through the `mcp_server()`.
+#' @param instructions Optional character string with custom server instructions
+#'   included in the capabilities response sent to clients.
 #'
 #' @returns
 #' `mcp_server()` and `mcp_session()` are both called primarily for their
@@ -502,7 +504,7 @@ capabilities <- function(protocol_version = latest_protocol_version,
     ),
     serverInfo = list(
       name = "R mcptools server",
-      version = as.character(packageVersion("mcptools"))
+      version = as.character(utils::packageVersion("mcptools"))
     ),
     instructions = instructions
   )

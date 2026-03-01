@@ -12,7 +12,8 @@ mcp_server(
   type = c("stdio", "http"),
   host = "127.0.0.1",
   port = as.integer(Sys.getenv("MCPTOOLS_PORT", "8080")),
-  session_tools = TRUE
+  session_tools = TRUE,
+  instructions = NULL
 )
 
 mcp_session()
@@ -42,6 +43,9 @@ for stdio transport.}
 tools (\code{list_r_sessions}, \code{select_r_session}) that work with
 \code{mcp_session()}. Defaults to \code{TRUE}. Note that the tools to interface with
 sessions are still first routed through the \code{mcp_server()}.}
+
+\item{instructions}{Optional character string with custom server instructions
+included in the capabilities response sent to clients.}
 }
 \value{
 \code{mcp_server()} and \code{mcp_session()} are both called primarily for their
