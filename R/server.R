@@ -470,7 +470,7 @@ handle_message_from_client <- function(line) {
     ) {
       handle_request(data)
     } else {
-      result <- forward_request(data)
+      forward_request(data)
     }
   } else if (is.null(data$id)) {
     # If there is no `id` in the request, then this is a notification and the
@@ -537,14 +537,10 @@ capabilities <- function(protocol_version = latest_protocol_version) {
     ),
     serverInfo = list(
       name = "R mcptools server",
-      version = "0.0.1"
-    )
+      version = as.character(packageVersion("mcptools"))
+    ),
+    instructions = "This provides information about a running R session."
   )
-
-  # `instructions` was introduced in protocol version 2025-03-26
-  if (protocol_version_gte(protocol_version, "2025-03-26")) {
-    res$instructions <- "This provides information about a running R session."
-  }
 
   res
 }
@@ -557,7 +553,7 @@ tool_as_json <- function(tool) {
   # This field is present but shouldn't be
   inputSchema$description <- NULL
   if (is.null(inputSchema$properties)) {
-    inputSchema$properties <- structure(list(), names = character())
+    inputSchema$properties <- named_list()
   }
 
   list(
