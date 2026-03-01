@@ -70,13 +70,14 @@ get_stdio_protocol_version <- function() {
 #' @param version    Negotiated protocol version.
 #' @noRd
 set_http_protocol_version <- function(session_id, version) {
-  if (is.null(the$http_protocol_versions)) {
-    ## TODO: This will grow indefinitely as new sessions are initialized. We should
-    ## consider pruning expired sessions after some timeout, but for now this is
-    ## simpler than implementing a more complex structure for tracking session state.
-    the$http_protocol_versions <- list()
-  }
-  the$http_protocol_versions[[session_id]] <- version
+  # ensure we index the internal list with a character key so lookups using the
+  # value from HTTP headers (always character) succeed regardless of the type
+  # returned by nanonext::random().
+  session_key <- as.character(session_id)
+  ## TODO: This will grow indefinitely as new sessions are initialized. We should
+  ## consider pruning expired sessions after some timeout, but for now this is
+  ## simpler than implementing a more complex structure for tracking session state.
+  the$http_protocol_versions[[session_key]] <- version
 }
 
 #' Retrieve the negotiated version for an HTTP session.
@@ -84,57 +85,9 @@ set_http_protocol_version <- function(session_id, version) {
 #' @return The negotiated version, or `NULL` if not yet initialized.
 #' @noRd
 get_http_protocol_version <- function(session_id) {
-  the$http_protocol_versions[[session_id]]
-}
-
-#' Validate the `MCP-Protocol-Version` header on an HTTP request.
-#'
-#' Per the spec: "the client MUST include the MCP-Protocol-Version header on
-#' all subsequent requests to the MCP server."
-#'
-#' @param req The Rook request environment.
-#' @return `TRUE` if the header is valid (matches a supported version),
-#'   or if the request is an `initialize` (where the header is not expected).
-#'   Returns a list with HTTP error response otherwise.
-#' @noRd
-validate_protocol_version_header <- function(req) {
-  # The header name is transformed by httpuv/Rook: HTTP_MCP_PROTOCOL_VERSION
-  header_version <- req$HTTP_MCP_PROTOCOL_VERSION
-
-  if (is.null(header_version)) {
-    return(list(
-      status = 400L,
-      headers = list("Content-Type" = "application/json"),
-      body = to_json(list(
-        jsonrpc = "2.0",
-        error = list(
-          code = -32600,
-          message = "Missing required MCP-Protocol-Version header",
-          data = list(supported = supported_protocol_versions)
-        )
-      ))
-    ))
+  if (!is.null(session_id)) {
+    the$http_protocol_versions[[session_id]]
   }
-
-  if (!header_version %in% supported_protocol_versions) {
-    return(list(
-      status = 400L,
-      headers = list("Content-Type" = "application/json"),
-      body = to_json(list(
-        jsonrpc = "2.0",
-        error = list(
-          code = -32600,
-          message = "Unsupported protocol version in MCP-Protocol-Version header",
-          data = list(
-            supported = supported_protocol_versions,
-            requested = header_version
-          )
-        )
-      ))
-    ))
-  }
-
-  TRUE
 }
 
 #' Compare the negotiated version against a reference version.
