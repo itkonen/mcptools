@@ -36,7 +36,11 @@ latest_protocol_version <- supported_protocol_versions[
 #' @return The negotiated version string.
 #' @noRd
 negotiate_protocol_version <- function(client_version) {
-  if (client_version %in% supported_protocol_versions) {
+  if (is.null(client_version) ||
+        !is.character(client_version) ||
+        length(client_version) != 1L) {
+    latest_protocol_version
+  } else if (client_version %in% supported_protocol_versions) {
     client_version
   } else {
     latest_protocol_version

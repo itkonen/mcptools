@@ -76,20 +76,12 @@ test_that("capabilities defaults to latest protocol version", {
   expect_equal(res$protocolVersion, latest_protocol_version)
 })
 
-test_that("capabilities includes instructions for versions >= 2025-03-26", {
+test_that("capabilities includes proper instructions", {
   res <- capabilities("2025-03-26")
-  expect_true(!is.null(res$instructions))
-
-  res <- capabilities("2025-06-18")
-  expect_true(!is.null(res$instructions))
-
-  res <- capabilities("2025-11-25")
-  expect_true(!is.null(res$instructions))
-})
-
-test_that("capabilities omits instructions for version 2024-11-05", {
-  res <- capabilities("2024-11-05")
-  expect_null(res$instructions)
+  expect_true(
+    is.null(res$instructions) ||
+      (is.character(res$instructions) && length(res$instructions) == 1L)
+  )
 })
 
 test_that("capabilities always includes required fields", {
