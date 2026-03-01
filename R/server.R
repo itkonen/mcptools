@@ -276,60 +276,6 @@ handle_http_post <- function(req) {
     ))
   }
 
-  session_id <- req$HTTP_MCP_SESSION_ID
-  protocol_version_header <- req$HTTP_MCP_PROTOCOL_VERSION
-  negotiated_protocol_version <- get_http_protocol_version(session_id)
-
-  if (!is.null(protocol_version_header) &&
-        protocol_version_gte(protocol_version_header, "2025-06-18")) {
-    ## For protocol versions >= 2025-06-18, both headers are required on all requests
-    if (is.null(session_id)) {
-      return(list(
-        status = 400L,
-        headers = list("Content-Type" = "application/json"),
-        body = to_json(list(
-          jsonrpc = "2.0",
-          error = list(
-            code = -32600,
-            message = "Missing required Mcp-Session-Id header"
-          )
-        ))
-      ))
-    } else {
-      if (is.null(negotiated_protocol_version)) {
-        return(list(
-          status = 404L,
-          headers = list("Content-Type" = "application/json"),
-          body = to_json(list(
-            jsonrpc = "2.0",
-            error = list(
-              code = -32600,
-              message = "Unknown or expired session ID"
-            )
-          ))
-        ))
-      } else if (!identical(negotiated_protocol_version, protocol_version_header)) {
-        return(list(
-          status = 400L,
-          headers = list("Content-Type" = "application/json"),
-          body = to_json(list(
-            jsonrpc = "2.0",
-            error = list(
-              code = -32600,
-              message = "Mcp-Protocol-Version header does not match negotiated protocol version for this session"
-            )
-          ))
-        ))
-      }
-    }
-  }
-
-  # Validate Mcp-Session-Id and MCP-Protocol-Version headers on non-initialize
-
-  # requests. Per spec (from 2025-06-18), the client MUST include both on
-  # subsequent HTTP requests. For older protocol versions we are permissive:
-  # if the client sends a session ID we verify it, but we do not require either
-  # header to be present.
   if (identical(data$method, "initialize")) {
     negotiated_protocol_version <-
       negotiate_protocol_version(data$params$protocolVersion)
@@ -348,11 +294,37 @@ handle_http_post <- function(req) {
     ))
   }
 
+  session_id <- req$HTTP_MCP_SESSION_ID
+  protocol_version_header <- req$HTTP_MCP_PROTOCOL_VERSION
+  negotiated_protocol_version <- get_http_protocol_version(session_id)
+
+  header_error <- validate_request_headers(
+    session_id,
+    negotiated_protocol_version,
+    protocol_version_header
+  )
+  if (!is.null(header_error)) {
+    return(list(
+      status = 400L,
+      headers = list(
+        "Content-Type" = "application/json",
+        "Mcp-Session-Id" = session_id
+      ),
+      body = to_json(jsonrpc_response(
+        id = data$id,
+        error = list(code = -32600, message = header_error)
+      ))
+    ))
+  }
+
   result <- handle_http_request_message(data)
 
   list(
     status = 200L,
-    headers = list("Content-Type" = "application/json"),
+    headers = list(
+      "Content-Type" = "application/json",
+      "Mcp-Session-Id" = session_id
+    ),
     body = to_json(result)
   )
 }

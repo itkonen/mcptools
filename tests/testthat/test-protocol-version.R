@@ -95,55 +95,6 @@ test_that("capabilities always includes required fields", {
   }
 })
 
-# -- validate_protocol_version_header -----------------------------------------
-
-test_that("validate_protocol_version_header accepts supported versions", {
-  for (version in supported_protocol_versions) {
-    req <- list(HTTP_MCP_PROTOCOL_VERSION = version)
-    expect_true(validate_protocol_version_header(req))
-  }
-})
-
-test_that("validate_protocol_version_header rejects missing header", {
-  req <- list()
-  result <- validate_protocol_version_header(req)
-  expect_false(isTRUE(result))
-  expect_equal(result$status, 400L)
-})
-
-test_that("validate_protocol_version_header rejects unsupported version", {
-  req <- list(HTTP_MCP_PROTOCOL_VERSION = "2099-01-01")
-  result <- validate_protocol_version_header(req)
-  expect_false(isTRUE(result))
-  expect_equal(result$status, 400L)
-})
-
-# -- validate_session_id_header ------------------------------------------------
-
-test_that("validate_session_id_header accepts known session", {
-  withr::defer(the$http_protocol_versions <- NULL)
-
-  set_http_protocol_version("test-session-abc", "2025-06-18")
-
-  req <- list(HTTP_MCP_SESSION_ID = "test-session-abc")
-  expect_true(validate_session_id_header(req))
-})
-
-test_that("validate_session_id_header rejects missing header", {
-  req <- list()
-  result <- validate_session_id_header(req)
-  expect_false(isTRUE(result))
-  expect_equal(result$status, 400L)
-})
-
-test_that("validate_session_id_header rejects unknown session", {
-  withr::defer(the$http_protocol_versions <- NULL)
-
-  req <- list(HTTP_MCP_SESSION_ID = "nonexistent-session")
-  result <- validate_session_id_header(req)
-  expect_false(isTRUE(result))
-  expect_equal(result$status, 404L)
-})
 
 # -- version-gated header enforcement in handle_http_post ----------------------
 # These tests verify the server's permissive behaviour: session ID and protocol
@@ -162,6 +113,7 @@ test_that("handle_http_post enforces headers for >= 2025-06-18 sessions", {
       charToRaw('{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
     })
   )
+  withr::local_options(mcptools.enforce_protocol_headers = TRUE)
   result <- handle_http_post(req_no_version)
   expect_equal(result$status, 400L)
 })
@@ -188,25 +140,6 @@ test_that("handle_http_post is permissive for < 2025-06-18 sessions", {
   expect_equal(result$status, 200L)
 })
 
-test_that("handle_http_post allows requests with no session header for old clients", {
-  withr::defer(the$http_protocol_versions <- NULL)
-  withr::defer(the$server_tools <- NULL)
-  the$sessions_enabled <- FALSE
-  set_server_tools(list(ellmer::tool(
-    function() "hello", "A test tool", name = "test_tool"
-  )), session_tools = FALSE)
-
-  # No Mcp-Session-Id header at all (old client that never got one) → OK
-  req <- list(
-    REQUEST_METHOD = "POST",
-    rook.input = list(read = function() {
-      charToRaw('{"jsonrpc":"2.0","id":2,"method":"tools/list"}')
-    })
-  )
-  result <- handle_http_post(req)
-  expect_equal(result$status, 200L)
-})
-
 test_that("handle_http_post rejects unknown session ID regardless of version", {
   withr::defer(the$http_protocol_versions <- NULL)
 
@@ -219,7 +152,7 @@ test_that("handle_http_post rejects unknown session ID regardless of version", {
     })
   )
   result <- handle_http_post(req)
-  expect_equal(result$status, 404L)
+  expect_equal(result$status, 400L)
 })
 
 test_that("handle_http_post notification path is permissive for old versions", {

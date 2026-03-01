@@ -113,48 +113,22 @@ protocol_version_lt <- function(version, reference) {
   version < reference
 }
 
-#' Validate the `Mcp-Session-Id` header on an HTTP request.
-#'
-#' Per the spec (from 2025-03-26): the server MAY assign a session ID during
-#' initialization. If it does, the client MUST include `Mcp-Session-Id` on all
-#' subsequent requests. A missing header should return 400 Bad Request; an
-#' unknown/expired session ID should return 404 Not Found.
-#'
-#' @param req The Rook request environment.
-#' @return `TRUE` if the session ID is valid (maps to a known session).
-#'   Returns a list with an HTTP error response otherwise.
-#' @noRd
-validate_session_id_header <- function(req) {
-  # httpuv/Rook transforms the header to HTTP_MCP_SESSION_ID
-  session_id <- req$HTTP_MCP_SESSION_ID
-
+validate_request_headers <- function(session_id,
+                                     negotiated_protocol_version,
+                                     protocol_version_from_header) {
   if (is.null(session_id)) {
-    return(list(
-      status = 400L,
-      headers = list("Content-Type" = "application/json"),
-      body = to_json(list(
-        jsonrpc = "2.0",
-        error = list(
-          code = -32600,
-          message = "Missing required Mcp-Session-Id header"
-        )
-      ))
-    ))
+    "Missing required Mcp-Session-Id header"
+  } else if (is.null(negotiated_protocol_version)) {
+    "Unknown or expired session ID"
+  } else if (getOption("mcptools.enforce_protocol_headers", default = FALSE) &&
+               protocol_version_gte(negotiated_protocol_version, "2025-06-18")) {
+    ## For protocol versions >= 2025-06-18, both headers are required on all requests.
+    ## For backwards compatibility, we cannot enforce this for older protocol versions.
+    ## Furthermore, mcp-remote does not enforce this rule, so we allow it by default.
+    if (!identical(negotiated_protocol_version, protocol_version_from_header)) {
+      "MCP-Protocol-Version header does not match negotiated protocol version for this session"
+    }
+  } else {
+    NULL
   }
-
-  if (is.null(get_http_protocol_version(session_id))) {
-    return(list(
-      status = 404L,
-      headers = list("Content-Type" = "application/json"),
-      body = to_json(list(
-        jsonrpc = "2.0",
-        error = list(
-          code = -32600,
-          message = "Unknown or expired session ID"
-        )
-      ))
-    ))
-  }
-
-  TRUE
 }
