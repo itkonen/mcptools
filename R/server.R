@@ -230,11 +230,15 @@ handle_http_request <- function(req) {
   if (req$REQUEST_METHOD == "POST") {
     return(handle_http_post(req))
   } else if (req$REQUEST_METHOD == "GET") {
-    return(handle_http_get(req))
+    return(list(
+      status = 405L,
+      headers = list("Allow" = "POST"),
+      body = "SSE streaming not yet implemented"
+    ))
   } else {
     return(list(
       status = 405L,
-      headers = list("Allow" = "GET, POST"),
+      headers = list("Allow" = "POST"),
       body = "Method Not Allowed"
     ))
   }
@@ -278,24 +282,31 @@ handle_http_post <- function(req) {
     ))
   }
 
+  response <- function(status_code, result) {
+    list(
+      status = status_code,
+      headers = list(
+        "Content-Type" = "application/json",
+        "Mcp-Session-Id" = session_id
+      ),
+      body = to_json(result)
+    )
+  }
+
+  ## Initialize the session and negotiate protocol version
   if (identical(data$method, "initialize")) {
     negotiated_protocol_version <-
       negotiate_protocol_version(data$params$protocolVersion)
     session_id <- nanonext::random(n = 16L)
     set_http_protocol_version(session_id, negotiated_protocol_version)
-    return(list(
-      status = 200L,
-      headers = list(
-        "Content-Type" = "application/json",
-        "Mcp-Session-Id" = session_id
-      ),
-      body = to_json(jsonrpc_response(
-        data$id,
-        capabilities(negotiated_protocol_version, the$server_instructions)
-      ))
-    ))
+    result <- jsonrpc_response(
+      data$id,
+      capabilities(negotiated_protocol_version, the$server_instructions)
+    )
+    return(response(200L, result))
   }
 
+  ## Validate session and protocol version for subsequent requests
   session_id <- req$HTTP_MCP_SESSION_ID
   protocol_version_header <- req$HTTP_MCP_PROTOCOL_VERSION
   negotiated_protocol_version <- get_http_protocol_version(session_id)
@@ -306,37 +317,26 @@ handle_http_post <- function(req) {
     protocol_version_header
   )
   if (!is.null(header_error)) {
-    return(list(
-      status = 400L,
-      headers = list(
-        "Content-Type" = "application/json",
-        "Mcp-Session-Id" = session_id
-      ),
-      body = to_json(jsonrpc_response(
-        id = data$id,
-        error = list(code = -32600, message = header_error)
-      ))
-    ))
+    result <- jsonrpc_response(
+      id = data$id,
+      error = list(code = -32600, message = header_error)
+    )
+    return(response(400L, result))
   }
 
+  ## If we made it here, the session and protocol version are valid.
+  ## Handle the request.
   result <- handle_http_request_message(data)
+  if (!is.null(result)) {
+    return(response(200L, result))
+  }
 
-  list(
-    status = 200L,
-    headers = list(
-      "Content-Type" = "application/json",
-      "Mcp-Session-Id" = session_id
-    ),
-    body = to_json(result)
+  ## No handler for the MCP method was found.
+  result <- jsonrpc_response(
+    data$id,
+    error = list(code = -32601, message = "Method not found")
   )
-}
-
-handle_http_get <- function(req) {
-  list(
-    status = 405L,
-    headers = list("Content-Type" = "text/plain"),
-    body = "SSE streaming not yet implemented"
-  )
+  return(response(404L, result))
 }
 
 handle_http_request_message <- function(data) {
@@ -347,31 +347,25 @@ handle_http_request_message <- function(data) {
     ))
   } else if (data$method == "tools/call") {
     tool_name <- data$params$name
-    if (
-      !the$sessions_enabled ||
-        tool_name %in% c("list_r_sessions", "select_r_session") ||
-        !nanonext::stat(the$server_socket, "pipes")
-    ) {
+    if (!the$sessions_enabled ||
+          tool_name %in% c("list_r_sessions", "select_r_session") ||
+          !nanonext::stat(the$server_socket, "pipes")) {
+      ## Execute the tool call in the server.
       prepared <- append_tool_fn(data)
       if (inherits(prepared, "jsonrpc_error")) {
         return(prepared)
       }
       return(execute_tool_call(prepared))
     } else {
+      ## Forward the tool call to the session.
       prepared <- append_tool_fn(data)
       if (inherits(prepared, "jsonrpc_error")) {
         return(prepared)
       }
-
       nanonext::send(the$server_socket, prepared, mode = "serial")
       response_raw <- nanonext::recv(the$server_socket, mode = "character")
       return(jsonlite::parse_json(response_raw))
     }
-  } else {
-    return(jsonrpc_response(
-      data$id,
-      error = list(code = -32601, message = "Method not found")
-    ))
   }
 }
 
