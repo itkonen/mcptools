@@ -244,10 +244,15 @@ add_mcp_server <- function(config, name, call = caller_env()) {
     },
     error = function(e) {
       if (process$get_exit_status() %in% c(1L, 2L)) {
+        # Try stderr first, fall back to stdout if empty
+        stderr_output <- process$read_all_error()
+        if (nchar(stderr_output) == 0) {
+          stderr_output <- process$read_all_output()
+        }
         cli::cli_abort(
           c(
             "The command {.code {config$command}} failed with the following error:",
-            "x" = "{paste0(process$read_all_error_lines(), collapse = '. ')}"
+            "x" = "{stderr_output}"
           ),
           call = call
         )

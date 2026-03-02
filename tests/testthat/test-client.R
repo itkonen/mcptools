@@ -90,11 +90,12 @@ test_that("mcp_tools() returns mcpServers when valid", {
 test_that("mcp_tools() errors informatively when process exits", {
   skip_on_cran()
   skip_on_ci()
+  rscript_path <- file.path(R.home("bin"), "Rscript")
 
   config <- list(
     mcpServers = list(
       "test" = list(
-        command = "Rscript",
+        command = rscript_path,
         args = c("-e", "stop('intentional error')")
       )
     )
@@ -103,5 +104,7 @@ test_that("mcp_tools() errors informatively when process exits", {
   tmpfile <- withr::local_tempfile(fileext = ".json")
   jsonlite::write_json(config, tmpfile, auto_unbox = TRUE)
 
-  expect_snapshot(error = TRUE, mcp_tools(tmpfile))
+  expect_snapshot(error = TRUE, mcp_tools(tmpfile), transform = function(x) {
+    gsub(rscript_path, "Rscript", x, fixed = TRUE)
+  })
 })

@@ -36,5 +36,5 @@
     Condition
       Error in `mcp_tools()`:
       ! The command `Rscript` failed with the following error:
-      x Error: intentional error. Execution halted
+      x Error: intentional error Execution halted
 
