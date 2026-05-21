@@ -47,6 +47,30 @@ test_that("as_tool_call_result handles ContentToolResult with error", {
   expect_true(output$result$isError)
 })
 
+test_that("as_tool_call_result preserves ContentToolResult error text", {
+  data <- list(id = 1)
+  error_json <- as.character(jsonlite::toJSON(
+    list(
+      error = list(
+        code = "missing_query",
+        message = "Query must be a non-empty string."
+      )
+    ),
+    auto_unbox = TRUE
+  ))
+
+  tool_result <- ellmer::ContentToolResult(error = error_json)
+
+  output <- as_tool_call_result(data, tool_result)
+
+  expect_true(output$result$isError)
+  expect_equal(output$result$content[[1]]$text, error_json)
+  expect_false(grepl(
+    "^Tool calling failed with error",
+    output$result$content[[1]]$text
+  ))
+})
+
 test_that("as_tool_call_result handles vector results", {
   data <- list(id = 1)
   result <- c("line1", "line2", "line3")

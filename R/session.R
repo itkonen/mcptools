@@ -55,20 +55,25 @@ handle_message_from_server <- function(data) {
 
 as_tool_call_result <- function(data, result) {
   is_error <- FALSE
-  format_result <- function(x) paste(x, collapse = "\n")
-  
+
   if (inherits(result, "ellmer::ContentToolResult")) {
     is_error <- !is.null(result@error)
-    format_result <- asNamespace("ellmer")[["tool_string"]] %||% format_result
+    text <- if (is_error) {
+      asNamespace("ellmer")[["tool_error_string"]](result)
+    } else {
+      asNamespace("ellmer")[["tool_string"]](result)
+    }
+  } else {
+    text <- paste(result, collapse = "\n")
   }
-  
+
   jsonrpc_response(
     data$id,
     list(
       content = list(
         list(
           type = "text",
-          text = format_result(result)
+          text = text
         )
       ),
       isError = is_error
